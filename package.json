@@ -1,0 +1,17 @@
+{
+  "name": "ironverge-tanks",
+  "version": "1.0.0",
+  "description": "IRONVERGE — endless 3D tank battle in the browser (three.js via CDN, mobile-first).",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "node server.mjs",
+    "dev": "node server.mjs",
+    "check": "node scripts/smoke-test.mjs",
+    "vendor": "node scripts/vendor-three.mjs"
+  },
+  "devDependencies": {
+    "three": "0.186.1"
+  },
+  "license": "MIT"
+}
