@@ -1,0 +1,37 @@
+<!doctype html><html><head><style>body{margin:0;background:#223;font:11px sans-serif;color:#fff}#lab{position:absolute;inset:0;pointer-events:none}#lab div{position:absolute;text-shadow:0 0 3px #000}</style>
+<script type="importmap">{"imports":{"three":"/vendor/three/build/three.module.js","three/addons/":"/vendor/three/examples/jsm/"}}</script></head>
+<body><div id="lab"></div><script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
+const q = new URLSearchParams(location.search);
+const list = q.get('m').split(',');
+const cols = +(q.get('cols') || 6), W = innerWidth, H = innerHeight, rows = Math.ceil(list.length / cols), cw = W / cols, ch = H / rows;
+const r = new THREE.WebGLRenderer({ antialias: true }); r.setSize(W, H); r.toneMapping = THREE.ACESFilmicToneMapping; document.body.appendChild(r.domElement);
+r.setScissorTest(true);
+const hdr = await new HDRLoader().loadAsync('../assets/hdri/' + (q.get('hdr') || 'quarry_01') + '.hdr'); hdr.mapping = THREE.EquirectangularReflectionMapping;
+const pm = new THREE.PMREMGenerator(r); const env = pm.fromEquirectangular(hdr).texture;
+const loader = new GLTFLoader();
+const scenes = [];
+for (let i = 0; i < list.length; i++) {
+  const s = new THREE.Scene(); s.environment = env; s.background = new THREE.Color(0x445566);
+  const d = new THREE.DirectionalLight(0xffffff, 2.5); d.position.set(3, 5, 4); s.add(d);
+  let info = list[i];
+  try {
+    const g = await loader.loadAsync('../assets/models/' + list[i] + '.glb');
+    const o = g.scene; s.add(o); o.updateMatrixWorld(true);
+    let tris = 0; o.traverse(m => { if (m.isMesh) { const gg = m.geometry; tris += (gg.index ? gg.index.count : gg.attributes.position.count) / 3; } });
+    if (g.animations.length) { const mx = new THREE.AnimationMixer(o); const a = mx.clipAction(g.animations.find(c => /walk|fly|idle/i.test(c.name)) || g.animations[0]); a.play(); mx.update(0.3); o.updateMatrixWorld(true); }
+    const b = new THREE.Box3().setFromObject(o, true); const sz = b.getSize(new THREE.Vector3()); const c = b.getCenter(new THREE.Vector3());
+    const R = Math.max(sz.x, sz.y, sz.z) * 0.62;
+    const cam = new THREE.PerspectiveCamera(40, cw / ch, R * 0.05, R * 20);
+    cam.position.set(c.x + R * 1.6, c.y + R * 1.1, c.z + R * 2.0); cam.lookAt(c);
+    scenes.push({ s, cam, i });
+    info += `<br>${Math.round(tris)}t ${sz.x.toFixed(1)}x${sz.y.toFixed(1)}x${sz.z.toFixed(1)}`;
+    if (g.animations.length) info += '<br>' + g.animations.map(a => a.name).join(',').slice(0, 60);
+  } catch (e) { info += ' ERR ' + e.message; }
+  const el = document.createElement('div'); el.style.left = (i % cols) * cw + 3 + 'px'; el.style.top = Math.floor(i / cols) * ch + 2 + 'px'; el.innerHTML = info; lab.appendChild(el);
+}
+for (const { s, cam, i } of scenes) { const x = (i % cols) * cw, y = H - (Math.floor(i / cols) + 1) * ch; r.setViewport(x, y, cw, ch); r.setScissor(x, y, cw - 2, ch - 2); r.render(s, cam); }
+window.DONE = true;
+</script></body></html>

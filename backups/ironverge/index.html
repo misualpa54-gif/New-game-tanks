@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#07100c" />
+<meta name="description" content="IRONVERGE — an endless 3D tank battle across an infinite procedurally generated world. Mythic beasts, demi-humans and machines. Mobile first: steer left / right, fire." />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="IRONVERGE" />
+<link rel="manifest" href="public/manifest.webmanifest" />
+<link rel="icon" href="public/icon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="public/icon.svg" />
+<link rel="stylesheet" href="styles.css" />
+<title>IRONVERGE — Endless Tank Warfare 3D</title>
+
+<!-- ── CDN bootstrap (classic script: must run before any module so the import map exists) ── -->
+<script src="src/cdn.js"></script>
+</head>
+<body>
+
+<canvas id="gl"></canvas>
+
+<!-- ══════════════════ HUD ══════════════════ -->
+<div id="hud" class="hidden" aria-hidden="true">
+
+  <!-- top left : hull / heat -->
+  <div class="hud-top-left">
+    <div class="bar-row">
+      <span class="bar-ico" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3z"/></svg>
+      </span>
+      <div class="bar hull"><i id="hullFill"></i><b id="hullTxt">100</b></div>
+    </div>
+    <div class="bar-row">
+      <span class="bar-ico" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg>
+      </span>
+      <div class="bar heat"><i id="heatFill"></i><b id="heatTxt">READY</b></div>
+    </div>
+    <div class="chip-row">
+      <div class="chip" id="chipShield" title="Shield">SHIELD <b id="shieldTxt">0s</b></div>
+      <div class="chip" id="chipOver" title="Overdrive">OVERDRIVE <b id="overTxt">0s</b></div>
+    </div>
+  </div>
+
+  <!-- top center : wave / score / combo -->
+  <div class="hud-top-center">
+    <div class="wave-line"><span id="waveLabel">WAVE</span> <b id="waveNum">1</b></div>
+    <div class="score-line"><b id="scoreNum">0</b><span class="combo" id="comboNum"></span></div>
+    <div class="sub-line"><span id="killNum">0 KILLS</span> · <span id="distNum">0 m</span></div>
+    <div id="killfeed"></div>
+    <div id="bossBar" class="boss hidden"><span id="bossName">DRAGON</span><i id="bossFill"></i></div>
+  </div>
+
+  <!-- top right : buttons + radar -->
+  <div class="hud-top-right">
+    <div class="icon-btns">
+      <button class="icon-btn" id="btnSound" title="Sound"><svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4zm12.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4z"/></svg></button>
+      <button class="icon-btn" id="btnPause" title="Pause"><svg viewBox="0 0 24 24"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg></button>
+    </div>
+    <canvas id="radar" width="176" height="176"></canvas>
+    <div class="radar-label">RADAR</div>
+  </div>
+
+  <!-- bottom : transparent touch controls -->
+  <div class="controls" id="controls">
+    <div class="cluster steer">
+      <button class="tbtn steer-btn" id="btnLeft" data-key="left" aria-label="Steer left">
+        <svg viewBox="0 0 24 24"><path d="M15 4 7 12l8 8z"/></svg>
+      </button>
+      <button class="tbtn steer-btn" id="btnRight" data-key="right" aria-label="Steer right">
+        <svg viewBox="0 0 24 24"><path d="M9 4l8 8-8 8z"/></svg>
+      </button>
+    </div>
+    <div class="cluster fire">
+      <button class="tbtn fire-btn" id="btnFire" data-key="fire" aria-label="Fire">
+        <span class="fire-ring"><i id="fireCd"></i></span>
+        <svg viewBox="0 0 24 24"><path d="M12 2c1 4-2 5-2 8a2 2 0 0 0 4 0c0-1 0-2-1-3 3 1 5 4 5 7a6 6 0 1 1-12 0c0-5 5-6 6-12z"/></svg>
+        <span class="fire-lbl">FIRE</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- projected damage numbers / markers -->
+  <div id="floaters"></div>
+  <div id="reticle" class="hidden"></div>
+
+  <!-- full-screen fx -->
+  <div id="flash"></div>
+  <div id="lowHp"></div>
+</div>
+
+<!-- ══════════════════ LOADING ══════════════════ -->
+<div id="loading" class="screen">
+  <div class="load-wrap">
+    <div class="logo">
+      <span class="logo-i">IRON</span><span class="logo-v">VERGE</span>
+    </div>
+    <div class="tag">ENDLESS&nbsp;3D&nbsp;TANK&nbsp;WARFARE</div>
+    <div class="load-bar"><i id="loadFill"></i></div>
+    <div class="load-meta"><span id="loadStage">Booting engine…</span><span id="loadPct">0%</span></div>
+    <div class="load-log" id="loadLog"></div>
+    <div class="tip" id="tipTxt">Tip: hold LEFT + RIGHT together to brake hard.</div>
+  </div>
+</div>
+
+<!-- ══════════════════ MENU ══════════════════ -->
+<div id="menu" class="screen hidden">
+  <div class="menu-wrap">
+    <div class="logo big"><span class="logo-i">IRON</span><span class="logo-v">VERGE</span></div>
+    <div class="tag">Drive forever. Kill everything.</div>
+
+    <button class="cta" id="btnPlay">DEPLOY</button>
+
+    <div class="best">BEST <b id="bestScore">0</b> · LAST WAVE <b id="bestWave">0</b></div>
+
+    <div class="menu-cols">
+      <div class="col">
+        <h4>CONTROLS</h4>
+        <ul class="keys">
+          <li><span class="kbtn">◀</span><span class="kbtn">▶</span> steer (hold both = brake)</li>
+          <li><span class="kbtn round">FIRE</span> cannon — turret auto-locks</li>
+          <li><span class="kbtn">A</span><span class="kbtn">D</span> / <span class="kbtn">←</span><span class="kbtn">→</span> keyboard steer</li>
+          <li><span class="kbtn">SPACE</span> / <span class="kbtn">CLICK</span> fire · <span class="kbtn">P</span> pause</li>
+        </ul>
+      </div>
+      <div class="col">
+        <h4>SETTINGS</h4>
+        <div class="set-row"><label for="setQuality">Graphics</label>
+          <select id="setQuality"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option></select>
+        </div>
+        <div class="set-row"><label for="setCam">Camera height</label>
+          <input id="setCam" type="range" min="14" max="46" step="1" value="28" />
+        </div>
+        <div class="set-row"><label for="setAim">Turret auto-aim</label>
+          <select id="setAim"><option value="assist" selected>Assist + lock</option><option value="free">Free (hull facing)</option></select>
+        </div>
+        <div class="set-row"><label for="setSound">Sound</label>
+          <select id="setSound"><option value="on" selected>On</option><option value="off">Off</option></select>
+        </div>
+        <div class="set-row"><label for="setShake">Screen shake</label>
+          <select id="setShake"><option value="on" selected>On</option><option value="off">Off</option></select>
+        </div>
+      </div>
+    </div>
+
+    <details class="credits">
+      <summary>Assets, credits &amp; engine</summary>
+      <div id="creditsBody">three.js r186 · CC0/CC-BY assets streamed from jsDelivr &amp; statically mirrors · procedural PBR fallbacks</div>
+      <a href="CREDITS.md" target="_blank" rel="noopener">Full licence &amp; attribution list</a>
+    </details>
+  </div>
+</div>
+
+<!-- ══════════════════ PAUSE ══════════════════ -->
+<div id="pause" class="screen hidden">
+  <div class="menu-wrap narrow">
+    <div class="logo"><span class="logo-i">PAUSED</span></div>
+    <button class="cta" id="btnResume">RESUME</button>
+    <button class="ghost" id="btnRestart">RESTART RUN</button>
+    <button class="ghost" id="btnQuit">MAIN MENU</button>
+    <div class="stats" id="pauseStats"></div>
+  </div>
+</div>
+
+<!-- ══════════════════ GAME OVER ══════════════════ -->
+<div id="over" class="screen hidden">
+  <div class="menu-wrap narrow">
+    <div class="logo dead"><span class="logo-i">HULL</span><span class="logo-v">BREACH</span></div>
+    <div class="tag" id="overTag">Your tank was destroyed.</div>
+    <div class="over-stats" id="overStats"></div>
+    <button class="cta" id="btnAgain">REDEPLOY</button>
+    <button class="ghost" id="btnOverMenu">MAIN MENU</button>
+  </div>
+</div>
+
+<!-- ══════════════════ FATAL ══════════════════ -->
+<div id="fatal" class="screen hidden">
+  <div class="menu-wrap narrow">
+    <div class="logo dead"><span class="logo-i">ENGINE</span><span class="logo-v">OFFLINE</span></div>
+    <div class="tag" id="fatalMsg">Could not start WebGL.</div>
+    <div class="set-row"><label for="cdnPick">Asset / engine CDN</label>
+      <select id="cdnPick"></select>
+    </div>
+    <button class="cta" id="btnRetry">RETRY</button>
+  </div>
+</div>
+
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

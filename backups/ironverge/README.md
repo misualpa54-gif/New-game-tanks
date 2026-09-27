@@ -1,16 +1,3 @@
-# Tanks — IRONVERGE & Tank Realms: Reforged
-
-This repository holds two browser tank games:
-
-| Folder | Game |
-|---|---|
-| `/` (repo root) | **IRONVERGE** — endless 3D tank warfare (this README) |
-| [`tank-realms-reforged/`](tank-realms-reforged/README.md) | **Tank Realms: Reforged** — a remake of Tank Realms v26.8 with real GLB models, PBR ground textures and HDRI skies. Start it at `http://localhost:8080/tank-realms-reforged/index.html` |
-| [`backups/ironverge/`](backups/ironverge) | a frozen snapshot copy of IRONVERGE |
-| [`backups/tank-realms-v26.8/`](backups/tank-realms-v26.8) | the original `tank_realms_v26.8.html` the remake is built from |
-
----
-
 # IRONVERGE — Endless 3D Tank Warfare
 
 A mobile-first HTML5 3D tank game built on **three.js r186** (latest), streamed
